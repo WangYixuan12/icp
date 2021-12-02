@@ -57,7 +57,7 @@ def nearest_neighbor(src, dst):
         indices: dst indices of the nearest neighbor
     '''
 
-    assert src.shape == dst.shape
+    # assert src.shape == dst.shape
 
     neigh = NearestNeighbors(n_neighbors=1)
     neigh.fit(dst)
@@ -80,7 +80,7 @@ def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
         i: number of iterations to converge
     '''
 
-    assert A.shape == B.shape
+    # assert A.shape == B.shape
 
     # get number of dimensions
     m = A.shape[1]
@@ -117,3 +117,71 @@ def icp(A, B, init_pose=None, max_iterations=20, tolerance=0.001):
     T,_,_ = best_fit_transform(A, src[:m,:].T)
 
     return T, distances, i
+
+def multi_icp(A, B, n=2, max_iterations=100, tolerance=0.001):
+    '''
+    The Iterative Closest Point method for multiple rigid objects: finds best-fit transform that maps points A on to points B
+    Input:
+        A: Nxm numpy array of source mD points
+        B: Nxm numpy array of destination mD point
+        n: number of objects
+        init_pose: list of (m+1)x(m+1) homogeneous transformation
+        max_iterations: exit algorithm after max_iterations
+        tolerance: convergence criteria
+    Output:
+        T: final homogeneous transformation that maps A on to B
+        distances: Euclidean distances (errors) of the nearest neighbor
+        i: number of iterations to converge
+    '''
+    # get number of dimensions
+    N, m = A.shape
+
+    # make points homogeneous, copy them to maintain the originals
+    src = np.ones((m+1,A.shape[0]))
+    dst = np.ones((m+1,B.shape[0]))
+    src[:m,:] = np.copy(A.T)
+    dst[:m,:] = np.copy(B.T)
+
+    # find the nearest neighbors between the current source and destination points
+    distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
+
+    dist_list = np.split(distances, n)
+    tgt_ind_list = np.split(indices, n)
+    src_ind_list = np.split(np.arange(indices.shape[0]), n)
+
+    T_list = []
+
+    for i in range(n):
+        # compute the transformation between the current source and nearest destination points
+        T,_,_ = best_fit_transform(src[:m,src_ind_list[i]].T, dst[:m,tgt_ind_list[i]].T)
+        T_list.append(T)
+    
+    prev_error = 0
+
+    for i in range(max_iterations):
+        # update correspondence
+        for j in range(n):
+            src_j = np.dot(T_list[j], src)
+            distances, indices = nearest_neighbor(src_j[:m,:].T, dst[:m,:].T)
+            dist_list[j] = distances
+            tgt_ind_list[j] = indices
+        dist_list_arr = np.array(dist_list) # nxN
+        tgt_ind_list_arr = np.array(tgt_ind_list) # nxN, closest target indices; Note: multiple transformed source points can have the same closest target
+        src_corr = dist_list_arr.argmin(axis=0) # N, src_corr is the index of chosen transformation
+
+        # check error
+        mean_error = np.mean(dist_list_arr.min(axis=0))
+        if np.abs(prev_error - mean_error) < tolerance:
+            break
+
+        # update transformation
+        for j in range(n):
+            src_subset = src[:m, src_corr==j]
+            dst_subset = dst[:m, tgt_ind_list_arr[j][src_corr==j]]
+            T,_,_ = best_fit_transform(src_subset.T, dst_subset.T)
+            T_list[j] = T
+        
+        # update source
+        for j in range(n):
+            src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
+    return T_list, distances, i

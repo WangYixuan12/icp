@@ -109,7 +109,69 @@ def test_icp():
 
     return
 
+def test_multi_icp(debug=False):
+    # Generate a random dataset
+    A1 = np.random.rand(N, dim)
+    A2 = np.random.rand(N, dim)+10
+    A = np.concatenate((A1, A2), axis=0)
+
+    total_time = 0
+
+    for i in range(num_tests):
+
+        B1 = np.copy(A1)
+        B2 = np.copy(A2)
+
+        # Translate
+        t1 = np.random.rand(dim)*translation
+        t2 = np.random.rand(dim)*translation
+        B1 += t1
+        B2 += t2
+        print("Translate t1: ", t1)
+        print("Translate t2: ", t2)
+
+        # Rotate
+        R1 = rotation_matrix(np.random.rand(dim), np.random.rand() * rotation)
+        R2 = rotation_matrix(np.random.rand(dim), np.random.rand() * rotation)
+        B1 = np.dot(R1, B1.T).T
+        B2 = np.dot(R2, B2.T).T
+        print("Rotate R1: ", R1)
+        print("Rotate R2: ", R2)
+
+        # Add noise
+        B1 += np.random.randn(N, dim) * noise_sigma
+        B2 += np.random.randn(N, dim) * noise_sigma
+        B = np.concatenate((B1, B2), axis=0)
+
+        # Shuffle to disrupt correspondence
+        np.random.shuffle(B)
+
+        # Run ICP
+        start = time.time()
+        T_list, distances, iterations = icp.multi_icp(B, A, tolerance=0.000001)
+        total_time += time.time() - start
+
+        # Make C a homogeneous representation of B
+        # C = np.ones((N, 4))
+        # C[:,0:3] = np.copy(B)
+
+        # Transform C
+        # C = np.dot(T, C.T).T
+
+        print("T_list: ", T_list)
+        print("iterations: ", iterations)
+
+        assert np.mean(distances) < 6*noise_sigma                   # mean error should be small
+        assert np.allclose(T_list[0][0:3,0:3].T, R1, atol=6*noise_sigma)     # T and R should be inverses
+        assert np.allclose(T_list[1][0:3,0:3].T, R2, atol=6*noise_sigma)     # T and R should be inverses
+        assert np.allclose(-T_list[0][0:3,3], t1, atol=6*noise_sigma)        # T and t should be inverses
+        assert np.allclose(-T_list[1][0:3,3], t2, atol=6*noise_sigma)        # T and t should be inverses
+
+    print('icp time: {:.3}'.format(total_time/num_tests))
+
+    return
 
 if __name__ == "__main__":
     test_best_fit()
     test_icp()
+    test_multi_icp()
