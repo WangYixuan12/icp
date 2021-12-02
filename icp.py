@@ -190,6 +190,75 @@ def multi_icp(A, B, n=2, max_iterations=100, tolerance=0.001):
             T_list[j] = T
         
         # update source
-        for j in range(n):
-            src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
+        # for j in range(n):
+        #     src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
     return T_list, distances, i
+
+def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=10, tolerance=0.001):
+    '''
+    The Iterative Closest Point method for multiple rigid objects: finds best-fit transform that maps points A on to points B
+    Input:
+        A: Nxm numpy array of source mD points
+        B: Nxm numpy array of destination mD point
+        n: number of objects
+        init_pose: list of (m+1)x(m+1) homogeneous transformation
+        max_iterations: exit algorithm after max_iterations
+        tolerance: convergence criteria
+    Output:
+        T: final homogeneous transformation that maps A on to B
+        distances: Euclidean distances (errors) of the nearest neighbor
+        i: number of iterations to converge
+    '''
+    # get number of dimensions
+    N, m = A.shape
+
+    # make points homogeneous, copy them to maintain the originals
+    src = np.ones((m+1,A.shape[0]))
+    dst = np.ones((m+1,B.shape[0]))
+    src[:m,:] = np.copy(A.T)
+    dst[:m,:] = np.copy(B.T)
+
+    src_corr = np.random.randint(n, size=N)
+    # If initial guess is correct, the result should be correct
+    # src_corr[:N//2] = 0
+    # src_corr[N//2:] = 1
+
+    # initialize transformation
+    T_list = []
+    dist_list = [None]*n
+    tgt_ind_list = [None]*n
+    for i in range(n):
+        T_list.append(np.eye(m+1))
+
+    for i in range(max_meta_it):
+        for k in range(n):
+            prev_error = 0
+            for j in range(max_iterations):
+                src_subset = np.copy(src)[:, src_corr==k]
+                distances, indices = nearest_neighbor(src_subset[:m,:].T, dst[:m,:].T)
+
+                # check error
+                mean_error = np.mean(distances.min(axis=0))
+                if np.abs(prev_error - mean_error) < tolerance:
+                    break
+
+                T,_,_ = best_fit_transform(src_subset[:m].T, dst[:m, indices].T)
+                T_list[k] = T
+            
+                # update source
+                for k in range(n):
+                    src_subset = np.dot(T_list[k], src_subset)
+
+        # update correspondence
+        for k in range(n):
+            src_j = np.dot(T_list[k], src)
+            distances, indices = nearest_neighbor(src_j[:m,:].T, dst[:m,:].T)
+            dist_list[k] = distances
+        dist_list_arr = np.array(dist_list) # nxN
+        src_corr = dist_list_arr.argmin(axis=0) # N, src_corr is the index of chosen transformation
+    
+    for j in range(n):
+        src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
+        distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
+
+    return T_list, distances, i, src_corr
