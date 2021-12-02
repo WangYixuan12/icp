@@ -124,7 +124,7 @@ def test_multi_icp(debug=False):
 
         # Translate
         t1 = np.random.rand(dim)*translation
-        t2 = np.random.rand(dim)*translation
+        t2 = -np.random.rand(dim)*translation
         B1 += t1
         B2 += t2
         print("Translate t1: ", t1)
@@ -173,5 +173,5 @@ def test_multi_icp(debug=False):
 
 if __name__ == "__main__":
     test_best_fit()
-    test_icp()
+    # test_icp()
     test_multi_icp()

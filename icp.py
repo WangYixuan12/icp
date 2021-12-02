@@ -19,6 +19,9 @@ def best_fit_transform(A, B):
     # get number of dimensions
     m = A.shape[1]
 
+    if A.shape[0] == 0:
+        return np.identity(m+1), np.identity(m), np.zeros(m)
+
     # translate points to their centroids
     centroid_A = np.mean(A, axis=0)
     centroid_B = np.mean(B, axis=0)
@@ -37,6 +40,11 @@ def best_fit_transform(A, B):
 
     # translation
     t = centroid_B.T - np.dot(R,centroid_A.T)
+    # print("A shape: ", A.shape)
+    # print("B shape: ", B.shape)
+    # print("centroid_A: ", centroid_A)
+    # print("centroid_B: ", centroid_B)
+    # print("R: ", R)
 
     # homogeneous transformation
     T = np.identity(m+1)
