@@ -67,7 +67,8 @@ def test_best_fit():
 def test_icp():
 
     # Generate a random dataset
-    A = np.random.rand(N, dim)
+    # TODO: +10 will make ICP wrong - need further debugging
+    A = np.random.rand(N, dim)+10
 
     total_time = 0
 
@@ -114,6 +115,8 @@ def test_multi_icp(debug=False):
     A1 = np.random.rand(N, dim)
     A2 = np.random.rand(N, dim)+10
     A = np.concatenate((A1, A2), axis=0)
+    # np.savetxt('A.txt', A)
+    # A = np.loadtxt('A.txt')
 
     total_time = 0
 
@@ -144,7 +147,9 @@ def test_multi_icp(debug=False):
         B = np.concatenate((B1, B2), axis=0)
 
         # Shuffle to disrupt correspondence
-        np.random.shuffle(B)
+        # np.random.shuffle(B)
+        # np.savetxt('B.txt', B)
+        # B = np.loadtxt('B.txt')
 
         # Run ICP
         start = time.time()
@@ -175,5 +180,5 @@ def test_multi_icp(debug=False):
 
 if __name__ == "__main__":
     test_best_fit()
-    # test_icp()
-    test_multi_icp()
+    test_icp()
+    # test_multi_icp()

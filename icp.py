@@ -194,7 +194,7 @@ def multi_icp(A, B, n=2, max_iterations=100, tolerance=0.001):
         #     src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
     return T_list, distances, i
 
-def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=10, tolerance=0.001):
+def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=20, tolerance=0.001):
     '''
     The Iterative Closest Point method for multiple rigid objects: finds best-fit transform that maps points A on to points B
     Input:
@@ -220,8 +220,8 @@ def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=10, tolerance=0.001):
 
     src_corr = np.random.randint(n, size=N)
     # If initial guess is correct, the result should be correct
-    # src_corr[:N//2] = 0
-    # src_corr[N//2:] = 1
+    src_corr[:N//2] = 1
+    src_corr[N//2:] = 0
 
     # initialize transformation
     T_list = []
@@ -233,21 +233,30 @@ def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=10, tolerance=0.001):
     for i in range(max_meta_it):
         for k in range(n):
             prev_error = 0
+            src_subset = np.copy(src)[:, src_corr==k]
+            A_subset = np.copy(A)[src_corr==k]
             for j in range(max_iterations):
-                src_subset = np.copy(src)[:, src_corr==k]
                 distances, indices = nearest_neighbor(src_subset[:m,:].T, dst[:m,:].T)
 
                 # check error
                 mean_error = np.mean(distances.min(axis=0))
                 if np.abs(prev_error - mean_error) < tolerance:
                     break
+                prev_error = mean_error
 
                 T,_,_ = best_fit_transform(src_subset[:m].T, dst[:m, indices].T)
-                T_list[k] = T
             
-                # update source
-                for k in range(n):
-                    src_subset = np.dot(T_list[k], src_subset)
+                src_subset = np.dot(T, src_subset)
+
+            # final transformation
+            T,_,_ = best_fit_transform(A_subset, src_subset[:m,:].T)
+            T_list[k] = T
+
+        # print status
+        print('Meta iteration: {}'.format(i))
+        print('src_corr: {}'.format(src_corr))
+        for k in range(n):
+            print('T_list {}: {}'.format(k, T_list[k]))
 
         # update correspondence
         for k in range(n):
