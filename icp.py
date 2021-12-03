@@ -220,8 +220,8 @@ def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=20, tolerance=0.001):
 
     src_corr = np.random.randint(n, size=N)
     # If initial guess is correct, the result should be correct
-    src_corr[:N//2] = 1
-    src_corr[N//2:] = 0
+    # src_corr[:N//2] = 1
+    # src_corr[N//2:] = 0
 
     # initialize transformation
     T_list = []

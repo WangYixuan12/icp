@@ -78,21 +78,20 @@ def test_icp():
 
         # Translate
         t = np.random.rand(dim)*translation
-        B += t
 
         # Rotate
         R = rotation_matrix(np.random.rand(dim), np.random.rand() * rotation)
-        B = np.dot(R, B.T).T
+        B = np.dot(R, B.T-10).T + t + 10
 
         # Add noise
-        B += np.random.randn(N, dim) * noise_sigma
+        # B += np.random.randn(N, dim) * noise_sigma
 
         # Shuffle to disrupt correspondence
         np.random.shuffle(B)
 
         # Run ICP
         start = time.time()
-        T, distances, iterations = icp.icp(B, A, tolerance=0.000001)
+        T, distances, iterations = icp.icp(A, B, tolerance=0.000001)
         total_time += time.time() - start
 
         # Make C a homogeneous representation of B
@@ -103,8 +102,8 @@ def test_icp():
         C = np.dot(T, C.T).T
 
         assert np.mean(distances) < 6*noise_sigma                   # mean error should be small
-        assert np.allclose(T[0:3,0:3].T, R, atol=6*noise_sigma)     # T and R should be inverses
-        assert np.allclose(-T[0:3,3], t, atol=6*noise_sigma)        # T and t should be inverses
+        assert np.allclose(T[0:3,0:3], R, atol=6*noise_sigma)     # T and R should be inverses
+        assert np.allclose(T[0:3,3], t, atol=6*noise_sigma)        # T and t should be inverses
 
     print('icp time: {:.3}'.format(total_time/num_tests))
 
@@ -128,16 +127,14 @@ def test_multi_icp(debug=False):
         # Translate
         t1 = np.random.rand(dim)*translation
         t2 = -np.random.rand(dim)*translation
-        B1 += t1
-        B2 += t2
-        print("Translate t1: ", t1)
-        print("Translate t2: ", t2)
 
         # Rotate
         R1 = rotation_matrix(np.random.rand(dim), np.random.rand() * rotation)
         R2 = rotation_matrix(np.random.rand(dim), np.random.rand() * rotation)
-        B1 = np.dot(R1, B1.T).T
-        B2 = np.dot(R2, B2.T).T
+        B1 = np.dot(R1, B1.T).T + t1
+        B2 = np.dot(R2, B2.T-10).T + t2 +10
+        print("Translate t1: ", t1)
+        print("Translate t2: ", t2)
         print("Rotate R1: ", R1)
         print("Rotate R2: ", R2)
 
@@ -180,5 +177,5 @@ def test_multi_icp(debug=False):
 
 if __name__ == "__main__":
     test_best_fit()
-    test_icp()
-    # test_multi_icp()
+    # test_icp()
+    test_multi_icp()
