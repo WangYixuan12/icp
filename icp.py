@@ -272,7 +272,7 @@ def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=20, tolerance=0.001):
 
     return T_list, distances, i, src_corr
 
-def multi_icp_known_corr(A, B, n=2, max_meta_it=10, tolerance=0.001):
+def multi_icp_known_corr(A, B, n=2, max_meta_it=10, tolerance=0.00001):
     '''
     The Iterative Closest Point method for multiple rigid objects: finds best-fit transform that maps points A on to points B
     Input:
@@ -329,7 +329,8 @@ def multi_icp_known_corr(A, B, n=2, max_meta_it=10, tolerance=0.001):
         # update correspondence
         for k in range(n):
             src_j = np.dot(T_list[k], src)
-            distances, indices = nearest_neighbor(src_j[:m,:].T, dst[:m,:].T)
+            distances = np.linalg.norm(src_j[:m,:].T - dst[:m,:].T, axis=1)
+            # distances, indices = nearest_neighbor(src_j[:m,:].T, dst[:m,:].T)
             dist_list[k] = distances
         dist_list_arr = np.array(dist_list) # nxN
         src_corr = dist_list_arr.argmin(axis=0) # N, src_corr is the index of chosen transformation
@@ -342,6 +343,7 @@ def multi_icp_known_corr(A, B, n=2, max_meta_it=10, tolerance=0.001):
     
     for j in range(n):
         src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
-        distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
+        distances = np.linalg.norm(src_j[:m,:].T - dst[:m,:].T, axis=0)
+        # distances, indices = nearest_neighbor(src[:m,:].T, dst[:m,:].T)
 
     return T_list, distances, i, src_corr

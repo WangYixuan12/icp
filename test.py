@@ -1,6 +1,7 @@
 import numpy as np
 import time
 import icp
+import open3d as o3d
 
 # Constants
 N = 10                                    # number of random points in the dataset
@@ -175,7 +176,43 @@ def test_multi_icp(debug=False):
 
     return
 
+def test_multi_icp_corr():
+    # known correspodence from files
+    pc0_file = '/home/yixuan/icp/3d_case/3d_case/10655/0.npy'
+    pc1_file = '/home/yixuan/icp/3d_case/3d_case/10655/1.npy'
+
+    pc0_cropped = np.load(pc0_file)
+    pc1_cropped = np.load(pc1_file)
+
+    # known correspodence test
+    n = 3
+    T_list, distances, i, src_corr = icp.multi_icp_known_corr(pc0_cropped, pc1_cropped, n=n)
+    print(distances.mean())
+
+    # calculate partially warped observed point
+    src = np.ones((4,pc0_cropped.shape[0]))
+    src[:3,:] = np.copy(pc0_cropped.T)
+    for j in range(n):
+        src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
+    warp_pc0_cropped = src[:3,:].T
+
+    warp_color = np.zeros((pc0_cropped.shape[0], 3))
+    color_list = [np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 0, 1])]
+    for i in range(n):
+        warp_color[src_corr==i] = color_list[i]
+
+    # visualize warped
+    warp_src_o3d = o3d.geometry.PointCloud()
+    warp_src_o3d.points = o3d.utility.Vector3dVector(warp_pc0_cropped)
+    warp_src_o3d.colors = o3d.utility.Vector3dVector(warp_color)
+
+    o3d.visualization.draw_geometries([warp_src_o3d])
+    # o3d.visualization.draw_geometries([pc1_cropped_o3d])
+    # o3d.visualization.draw_geometries([warp_pc0_cropped_o3d])
+    return
+
 if __name__ == "__main__":
     test_best_fit()
     # test_icp()
-    test_multi_icp()
+    # test_multi_icp()
+    test_multi_icp_corr()
