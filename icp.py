@@ -194,7 +194,7 @@ def multi_icp(A, B, n=2, max_iterations=100, tolerance=0.001):
         #     src[:, src_corr==j] = np.dot(T_list[j], src[:, src_corr==j])
     return T_list, distances, i
 
-def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=20, tolerance=0.001):
+def multi_icp_2(A, B, n=2, max_meta_it=20, max_iterations=20, tolerance=0.000001, debug=False):
     '''
     The Iterative Closest Point method for multiple rigid objects: finds best-fit transform that maps points A on to points B
     Input:
@@ -253,10 +253,11 @@ def multi_icp_2(A, B, n=2, max_meta_it=10, max_iterations=20, tolerance=0.001):
             T_list[k] = T
 
         # print status
-        print('Meta iteration: {}'.format(i))
-        print('src_corr: {}'.format(src_corr))
-        for k in range(n):
-            print('T_list {}: {}'.format(k, T_list[k]))
+        if debug:
+            print('Meta iteration: {}'.format(i))
+            print('src_corr: {}'.format(src_corr))
+            for k in range(n):
+                print('T_list {}: {}'.format(k, T_list[k]))
 
         # update correspondence
         for k in range(n):
